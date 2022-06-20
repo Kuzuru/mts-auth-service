@@ -1,8 +1,9 @@
 package runners
 
 import (
-	"google.golang.org/grpc"
 	"net"
+
+	"google.golang.org/grpc"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/spf13/viper"
