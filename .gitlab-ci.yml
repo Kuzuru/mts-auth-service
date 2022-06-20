@@ -1,2 +1,6 @@
 include:
   remote: 'https://gitlab.com/mts-teta-public/devops-tools/-/raw/master/.gitlab-ci-main.yml'
+
+deploy:
+  variables:
+    ROLLOUT_TIMEOUT: 360s
