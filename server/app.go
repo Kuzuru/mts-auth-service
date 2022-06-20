@@ -228,14 +228,14 @@ func Run(port string) {
 		accessToken := &ValidateService.IsTokenVaildRequest{Token: c.Cookies("accessToken")}
 		refreshToken := &ValidateService.IsTokenVaildRequest{Token: c.Cookies("refreshToken")}
 
-		// To make it global outside errnil check
+		// To make it global outside err nil check
 		var accessTokenString string
 
 		_, err := JWTService.IsTokenVaild(context.Background(), accessToken)
 		if err != nil {
 			// If access token is not valid then we check
 			// for refreshToken validity. If refresh token
-			// is valid then we creting new access token
+			// is valid then we're creating new access token
 			_, err := JWTService.IsTokenVaild(context.Background(), refreshToken)
 			if err != nil {
 				return c.SendStatus(401)
@@ -287,7 +287,7 @@ func Run(port string) {
 
 		// If error was not nil, then we created a new
 		// pair of tokens, so we can't use cookie set
-		// access token because it will be setted on
+		// access token because it will be set on
 		// the next request
 		var accessTokenClaims *jwt.MapClaims
 
