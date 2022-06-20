@@ -11,8 +11,8 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/spf13/viper"
 
-	"main/internal/log"
-	ValidateService "main/pkg/JWTValidationService"
+	"auth-service/internal/log"
+	ValidateService "auth-service/pkg/JWTValidationService"
 )
 
 type GRPCServer struct {

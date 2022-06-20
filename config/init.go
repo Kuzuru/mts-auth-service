@@ -6,7 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/spf13/viper"
 
-	"main/internal/log"
+	"auth-service/internal/log"
 )
 
 func Init() error {
