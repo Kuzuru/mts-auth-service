@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+option go_package = "./JWTValidationService;JWTValidationService";
+
+package JWTValidation;
+
+service JWTValidationService {
+  rpc IsTokenValid(IsTokenValidRequest) returns (IsTokenValidResponse) {}
+}
+
+message IsTokenValidRequest {
+  string token = 1;
+}
+
+message IsTokenValidResponse {}
