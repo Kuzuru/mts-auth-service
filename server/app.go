@@ -353,7 +353,7 @@ func SetCookie(c *fiber.Ctx, name, value string, TTL int64) {
 func DeleteCookie(c *fiber.Ctx, name string) {
 	c.Cookie(&fiber.Cookie{
 		Name:     name,
-		Value:    "",
+		Path:     "/",
 		Expires:  time.Unix(0, 0),
 		HTTPOnly: true,
 	})
