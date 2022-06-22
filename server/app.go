@@ -354,7 +354,7 @@ func DeleteCookie(c *fiber.Ctx, name string) {
 	c.Cookie(&fiber.Cookie{
 		Name:     name,
 		Value:    "",
-		Expires:  time.Unix(0, 0).UTC(),
+		Expires:  time.Unix(0, 0),
 		HTTPOnly: true,
 	})
 }
