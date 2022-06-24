@@ -3,25 +3,27 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"os"
+
 	_ "github.com/lib/pq"
 )
 
-var DbInfo = "user=postgres password=qwerty dbname=usersdb sslmode=disable"
-var DbName = "usersdb"
+var dbName = os.Getenv("DB_NAME")
+var sslMode = os.Getenv("SSL_MODE")
+var dbUser = os.Getenv("DB_USER")
+var dbPassword = os.Getenv("DB_PASSWORD")
+
+var dbInfo = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s", dbUser, dbPassword, dbName, sslMode)
 
 func InitDb() error {
-	fmt.Print("After init")
-	db, err := sql.Open("postgres", DbInfo)
+	db, err := sql.Open("postgres", dbInfo)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	fmt.Print("After con")
-
-	_, err = db.Exec(`CREATE DATABASE ` + DbName)
+	_, err = db.Exec(`CREATE DATABASE ` + dbName)
 	if err != nil {
-		fmt.Print("After create")
 		return err
 	}
 
@@ -29,7 +31,7 @@ func InitDb() error {
 }
 
 func CreateTables() error {
-	db, err := sql.Open("postgres", DbInfo)
+	db, err := sql.Open("postgres", dbInfo)
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"gitlab.com/g6834/team32/auth-service/config"
 	"os"
 	"runtime"
 	"syscall"
@@ -13,6 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"gitlab.com/g6834/team32/auth-service/config"
 	"gitlab.com/g6834/team32/auth-service/internal/runners"
 	"gitlab.com/g6834/team32/auth-service/server"
 )
@@ -24,25 +24,30 @@ func main() {
 	// Load environment variables
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal().Msgf("Error loading .env file: %w", err.Error())
+		log.Fatal().AnErr("Error loading .env file: %w", err)
 	}
 	var sentryDsn = os.Getenv("SENTRY_DSN")
 	var mode = os.Getenv("MODE")
 	var httpPort = os.Getenv("HTTP")
 
 	// Set app mode
-	if mode == "prod" {
+	switch mode {
+	case "prod":
 		zerolog.SetGlobalLevel(zerolog.FatalLevel)
+
 		// If debug mode is off then shutdown os.Stdout (yet we probably shouldn't do this)
 		if err := syscall.Close(syscall.Stdout); err != nil {
 			sentry.CaptureException(err)
 			log.Fatal().Stack().Err(err)
 		}
-	} else if mode == "trace" {
+
+	case "trace":
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	} else if mode == "debug" {
+
+	case "debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
+
+	default:
 		zerolog.SetGlobalLevel(zerolog.NoLevel)
 	}
 
@@ -65,8 +70,8 @@ func main() {
 	// This will add new user with specified login and password. Do not uncomment unless you need to add new user.
 	/*if !fiber.IsChild() {
 		err = db.AddUser(internal.User{
-			Login:    "undefined",
-			Password: "abcde",
+			Login:    "test123",
+			Password: "qwerty",
 		})
 		if err != nil {
 			log.Fatal().Stack().Msg(err.Error())

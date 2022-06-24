@@ -10,19 +10,19 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/spf13/viper"
 
-	ValidateService "gitlab.com/g6834/team32/auth-service/pkg/JWTValidationService"
+	validation "gitlab.com/g6834/team32/auth-service/pkg/JWTValidationService"
 )
 
 type GRPCServer struct {
-	ValidateService.UnimplementedJWTValidationServiceServer
+	validation.UnimplementedJWTValidationServiceServer
 }
 
 // IsTokenValid checks if the tokenString is valid. If the token passes
 // the check, the return value is *jwt.MapClaims of this token
-func (s *GRPCServer) IsTokenValid(_ context.Context, req *ValidateService.IsTokenValidRequest) (*ValidateService.IsTokenValidResponse, error) {
+func (s *GRPCServer) IsTokenValid(_ context.Context, req *validation.IsTokenValidRequest) (*validation.IsTokenValidResponse, error) {
 	tokenString := req.GetToken()
 	if len(strings.Split(tokenString, ".")) != 3 {
-		return &ValidateService.IsTokenValidResponse{}, ErrInvalidToken
+		return &validation.IsTokenValidResponse{}, ErrInvalidToken
 	}
 
 	token, err := jwt.Parse(tokenString,
@@ -37,17 +37,17 @@ func (s *GRPCServer) IsTokenValid(_ context.Context, req *ValidateService.IsToke
 	if err != nil {
 		sentry.CaptureException(err)
 		log.Error().Err(err)
-		return &ValidateService.IsTokenValidResponse{}, err
+		return &validation.IsTokenValidResponse{}, err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return &ValidateService.IsTokenValidResponse{}, ErrInvalidToken
+		return &validation.IsTokenValidResponse{}, ErrInvalidToken
 	}
 
 	if expiresAt, ok := claims["exp"]; ok && int64(expiresAt.(float64)) < time.Now().UTC().Unix() {
-		return &ValidateService.IsTokenValidResponse{}, ErrExpiredToken
+		return &validation.IsTokenValidResponse{}, ErrExpiredToken
 	}
 
-	return &ValidateService.IsTokenValidResponse{}, nil
+	return &validation.IsTokenValidResponse{}, nil
 }

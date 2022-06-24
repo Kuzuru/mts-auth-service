@@ -2,6 +2,9 @@ package db
 
 import "errors"
 
+// ErrInvalidLogin indicates that a login did not pass regex check and can't be used.
+var ErrInvalidLogin = errors.New("this login is not valid. Logins must be 5-20 char long ")
+
 // ErrUserAlreadyExists indicates that a user with this login already exists.
 var ErrUserAlreadyExists = errors.New("user with this login already exists")
 
