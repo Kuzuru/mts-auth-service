@@ -11,17 +11,17 @@ sentry:
 users:
   first_user:
     id: 1
-    name: "John Doe"
+    login: "John Doe"
     password: "$2a$04$MSHk3Xd/ZOFzdiBySEGLE.LTYpUzc9By55qhfmoBYaG4LdOZg6W2i" # Passwd: !@#QWE123qwe
 
   second_user:
     id: 2
-    name: "Michael Jackson"
+    login: "Michael Jackson"
     password: "$2a$04$MSHk3Xd/ZOFzdiBySEGLE.LTYpUzc9By55qhfmoBYaG4LdOZg6W2i" # Passwd: !@#QWE123qwe
 
   third_user:
     id: 3
-    name: "test123"
+    login: "test123"
     password: "$2a$12$6kx0HmPA.O66v9cCNpr/f.RH.o3aWskap4wCN1q5fX.rx8cw9jjEW" # Passwd: qwerty
 
 token:
