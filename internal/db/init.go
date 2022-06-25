@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	_ "github.com/lib/pq"
@@ -37,20 +38,12 @@ func CreateTables() error {
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`create table users(
-    	id  serial
-        	constraint users_pk
-        	primary key,
-    	login    varchar(40)  not null,
-    	password varchar(256) not null
-	);
+	file, err := ioutil.ReadFile("init.sql")
+	if err != nil {
+		return err
+	}
 
-	create unique index users_id_uindex
-    on users (id);
-
-	create unique index users_login_uindex
-    on users (login);`)
-
+	_, err = db.Exec(string(file))
 	if err != nil {
 		return err
 	}
