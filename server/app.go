@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -71,7 +72,16 @@ func TokenEncode(claims *jwt.MapClaims, expiryAfter int64) (string, error) {
 	return signedToken, nil
 }
 
+func RegisterHTTPEndpoints(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
+	Login(v1)
+
+	Logout(v1, JWTService)
+
+	Validate(v1, JWTService)
+}
+
 func Run(port string) {
+	// TODO: Clean app.go
 	// Starting gRPC Client
 	cwt, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -91,7 +101,6 @@ func Run(port string) {
 	}(conn)
 
 	JWTService := validation.NewJWTValidationServiceClient(conn)
-	///////////////////////
 
 	if !fiber.IsChild() {
 		log.Info().Msgf("Running server on %s:%s\n", os.Getenv("HOST"), os.Getenv("HTTP"))
@@ -107,7 +116,17 @@ func Run(port string) {
 	app.Use(
 		recover.New(),
 		logger.New(),
+		pprof.New(),
 	)
+
+	// /profiler
+	debug := app.Group("/debug")
+
+	profiler := debug.Group("/pprof")
+
+	profiler.Post("/", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
 
 	// /auth
 	auth := app.Group("/auth")
@@ -118,13 +137,8 @@ func Run(port string) {
 		return c.Next()
 	})
 
-	// TODO: place routes definition into a separate handlers. Clean app.go
-	// Declaring routes
-	Login(v1)
-
-	Logout(v1, JWTService)
-
-	Validate(v1, JWTService)
+	// Registering endpoints
+	RegisterHTTPEndpoints(v1, JWTService)
 
 	// Running server in background
 	go func() {
