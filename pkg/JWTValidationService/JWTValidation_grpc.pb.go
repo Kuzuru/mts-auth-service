@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type JWTValidationServiceClient interface {
-	IsTokenVaild(ctx context.Context, in *IsTokenVaildRequest, opts ...grpc.CallOption) (*IsTokenVaildResponse, error)
+	IsTokenValid(ctx context.Context, in *IsTokenValidRequest, opts ...grpc.CallOption) (*IsTokenValidResponse, error)
 }
 
 type jWTValidationServiceClient struct {
@@ -33,9 +33,9 @@ func NewJWTValidationServiceClient(cc grpc.ClientConnInterface) JWTValidationSer
 	return &jWTValidationServiceClient{cc}
 }
 
-func (c *jWTValidationServiceClient) IsTokenVaild(ctx context.Context, in *IsTokenVaildRequest, opts ...grpc.CallOption) (*IsTokenVaildResponse, error) {
-	out := new(IsTokenVaildResponse)
-	err := c.cc.Invoke(ctx, "/JWTValidation.JWTValidationService/IsTokenVaild", in, out, opts...)
+func (c *jWTValidationServiceClient) IsTokenValid(ctx context.Context, in *IsTokenValidRequest, opts ...grpc.CallOption) (*IsTokenValidResponse, error) {
+	out := new(IsTokenValidResponse)
+	err := c.cc.Invoke(ctx, "/JWTValidation.JWTValidationService/IsTokenValid", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *jWTValidationServiceClient) IsTokenVaild(ctx context.Context, in *IsTok
 // All implementations must embed UnimplementedJWTValidationServiceServer
 // for forward compatibility
 type JWTValidationServiceServer interface {
-	IsTokenVaild(context.Context, *IsTokenVaildRequest) (*IsTokenVaildResponse, error)
+	IsTokenValid(context.Context, *IsTokenValidRequest) (*IsTokenValidResponse, error)
 	mustEmbedUnimplementedJWTValidationServiceServer()
 }
 
@@ -54,8 +54,8 @@ type JWTValidationServiceServer interface {
 type UnimplementedJWTValidationServiceServer struct {
 }
 
-func (UnimplementedJWTValidationServiceServer) IsTokenVaild(context.Context, *IsTokenVaildRequest) (*IsTokenVaildResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsTokenVaild not implemented")
+func (UnimplementedJWTValidationServiceServer) IsTokenValid(context.Context, *IsTokenValidRequest) (*IsTokenValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IsTokenValid not implemented")
 }
 func (UnimplementedJWTValidationServiceServer) mustEmbedUnimplementedJWTValidationServiceServer() {}
 
@@ -70,20 +70,20 @@ func RegisterJWTValidationServiceServer(s grpc.ServiceRegistrar, srv JWTValidati
 	s.RegisterService(&JWTValidationService_ServiceDesc, srv)
 }
 
-func _JWTValidationService_IsTokenVaild_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IsTokenVaildRequest)
+func _JWTValidationService_IsTokenValid_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IsTokenValidRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(JWTValidationServiceServer).IsTokenVaild(ctx, in)
+		return srv.(JWTValidationServiceServer).IsTokenValid(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/JWTValidation.JWTValidationService/IsTokenVaild",
+		FullMethod: "/JWTValidation.JWTValidationService/IsTokenValid",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(JWTValidationServiceServer).IsTokenVaild(ctx, req.(*IsTokenVaildRequest))
+		return srv.(JWTValidationServiceServer).IsTokenValid(ctx, req.(*IsTokenValidRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -96,8 +96,8 @@ var JWTValidationService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*JWTValidationServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "IsTokenVaild",
-			Handler:    _JWTValidationService_IsTokenVaild_Handler,
+			MethodName: "IsTokenValid",
+			Handler:    _JWTValidationService_IsTokenValid_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

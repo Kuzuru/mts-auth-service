@@ -2,41 +2,90 @@ package main
 
 import (
 	"os"
+	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
-	"github.com/spf13/viper"
+	"github.com/joho/godotenv"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
-	"auth-service/config"
-	"auth-service/internal/log"
-	"auth-service/internal/runners"
-	"auth-service/server"
+	"gitlab.com/g6834/team32/auth-service/config"
+	"gitlab.com/g6834/team32/auth-service/internal/runners"
+	"gitlab.com/g6834/team32/auth-service/server"
 )
 
 func main() {
-	if err := config.Init(); err != nil {
-		log.Error.Fatalf("%s", err.Error())
+	// Set logger output stream and time format
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC1123})
+
+	// Load environment variables
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal().AnErr("Error loading .env file: %w", err)
+	}
+	var sentryDsn = os.Getenv("SENTRY_DSN")
+	var mode = os.Getenv("MODE")
+	var httpPort = os.Getenv("HTTP")
+
+	// Set app mode
+	switch mode {
+	case "prod":
+		zerolog.SetGlobalLevel(zerolog.FatalLevel)
+
+		// If debug mode is off then shutdown os.Stdout (yet we probably shouldn't do this)
+		if err := syscall.Close(syscall.Stdout); err != nil {
+			sentry.CaptureException(err)
+			log.Fatal().Stack().Err(err)
+		}
+
+	case "trace":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+
+	default:
+		zerolog.SetGlobalLevel(zerolog.NoLevel)
 	}
 
-	// Set threads
-	config.Runtime()
-
-	// If debug mode is off then shutdown os.Stdout
-	if !viper.GetBool("debug") {
-		os.Stdout = nil
+	// Load viper config
+	// TODO: Decide how different configuration constants will be loaded.
+	// This project retrieves configuration constants both from env and viper right now. We need either to choose one of
+	// them, or stick to some strategy (e.g. secrets are stored in env and less sensitive data, such as hosts and port
+	// numbers are stored in viper).
+	err = config.Init()
+	if err != nil {
+		log.Fatal().Msg(err.Error())
 	}
+
+	// Set number of processes to runtime.NumCPU
+	NumCPU := runtime.GOMAXPROCS(runtime.NumCPU())
+	if !fiber.IsChild() {
+		log.Info().Msgf("Running with %d CPUs\n", NumCPU)
+	}
+
+	// This will add new user with specified login and password. Do not uncomment unless you need to add new user.
+	/*if !fiber.IsChild() {
+		err = db.AddUser(internal.User{
+			Login:    "test123",
+			Password: "qwerty",
+		})
+		if err != nil {
+			log.Fatal().Stack().Msg(err.Error())
+		}
+	}*/
 
 	// Init sentry
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn: viper.GetString("sentry.dsn"),
+	err = sentry.Init(sentry.ClientOptions{
+		Dsn:              sentryDsn,
+		TracesSampleRate: 1.0,
 	})
-
 	if err != nil {
-		log.Error.Fatalf("sentry.Init: %s", err)
+		log.Fatal().Stack().Msgf("sentry.Init: %s", err)
 	}
-
-	// Flush buffered events before the program terminates.
 	defer sentry.Flush(2 * time.Second)
 
 	// Starting gRPC server only once
@@ -45,5 +94,5 @@ func main() {
 	}
 
 	// Start Fiber server
-	server.Run(viper.GetString("ports.http"))
+	server.Run(httpPort)
 }

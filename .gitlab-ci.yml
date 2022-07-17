@@ -1,2 +1,12 @@
 include:
   remote: 'https://gitlab.com/mts-teta-public/devops-tools/-/raw/master/.gitlab-ci-main.yml'
+
+
+newman tests:
+  variables:
+    POSTMAN_COLLECTIONS_ROOT: https://gitlab.com/g6834/team32/auth-service/-/raw/main/postman-collections/
+
+
+deploy:
+  variables:
+    ROLLOUT_TIMEOUT: 360s
