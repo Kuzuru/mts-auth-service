@@ -3,6 +3,7 @@ package runners
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	"net"
 	"os"
 	"os/signal"
@@ -23,9 +24,9 @@ func StartGRPC() {
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	log.Info().Msgf("Starting gRPC server on %s:%s\n", os.Getenv("HOST"), os.Getenv("GRPC"))
+	log.Info().Msgf("Starting gRPC server on %s:%s\n", viper.GetString("HOST"), viper.GetString("GRPC"))
 
-	grpcAddress := fmt.Sprintf("%s:%s", os.Getenv("HOST"), os.Getenv("GRPC"))
+	grpcAddress := fmt.Sprintf("%s:%s", viper.GetString("HOST"), viper.GetString("GRPC"))
 
 	listener, err := net.Listen("tcp", grpcAddress)
 	if err != nil {

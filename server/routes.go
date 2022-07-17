@@ -5,7 +5,7 @@ package server
 import (
 	"context"
 	"errors"
-	"os"
+	"github.com/spf13/viper"
 	"strconv"
 
 	"github.com/getsentry/sentry-go"
@@ -13,20 +13,30 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 
+	_ "gitlab.com/g6834/team32/auth-service/docs"
+
 	"gitlab.com/g6834/team32/auth-service/internal"
 	"gitlab.com/g6834/team32/auth-service/internal/db"
 	"gitlab.com/g6834/team32/auth-service/internal/handlers"
 	validation "gitlab.com/g6834/team32/auth-service/pkg/JWTValidationService"
 )
 
+// @Summary Login
+// @Tags Auth
+// @Description Login to an account
+// @ID login-account
+// @Accept json
+// @Produce json
+// @Param input body handler.LoginRequest true "Account info"
+// @Success 200 {object} handler.LoginResponse
+// @Failure 403,500 {object} handler.ErrorResponse
+// @Router /auth/v1/login [post]
 func Login(v1 fiber.Router) {
 	v1.Post("/login", func(c *fiber.Ctx) error {
 		var user internal.User
 
 		if err := c.BodyParser(&user); err != nil {
-			c.Status(500)
-
-			return c.JSON(fiber.Map{
+			return c.Status(500).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		}
@@ -34,16 +44,14 @@ func Login(v1 fiber.Router) {
 		// Searching for user in DB
 		err := db.GetUser(user)
 		if err != nil {
-			c.Status(403)
-
-			return c.JSON(fiber.Map{
+			return c.Status(403).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		}
 
 		// Getting access and refresh tokens expires time
-		accessTokenTTL, _ := strconv.ParseInt(os.Getenv("ACCESS_TTL"), 10, 64)
-		refreshTokenTTL, _ := strconv.ParseInt(os.Getenv("REFRESH_TTL"), 10, 64)
+		accessTokenTTL, _ := strconv.ParseInt(viper.GetString("ACCESS_TTL"), 10, 64)
+		refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("REFRESH_TTL"), 10, 64)
 
 		accessTokenString, err := CreateToken(&jwt.MapClaims{
 			"login": user.Login,
@@ -137,8 +145,8 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 				return c.SendStatus(403)
 			}
 
-			accessTokenTTL, _ := strconv.ParseInt(os.Getenv("ACCESS_TTL"), 10, 64)
-			refreshTokenTTL, _ := strconv.ParseInt(os.Getenv("REFRESH_TTL"), 10, 64)
+			accessTokenTTL, _ := strconv.ParseInt(viper.GetString("ACCESS_TTL"), 10, 64)
+			refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("REFRESH_TTL"), 10, 64)
 
 			accessTokenString, err = CreateToken(&jwt.MapClaims{
 				"Login": user.Login,

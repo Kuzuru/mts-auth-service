@@ -3,16 +3,15 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
-	"os"
-
 	_ "github.com/lib/pq"
+	"github.com/spf13/viper"
+	"io/ioutil"
 )
 
-var dbName = os.Getenv("DB_NAME")
-var sslMode = os.Getenv("SSL_MODE")
-var dbUser = os.Getenv("DB_USER")
-var dbPassword = os.Getenv("DB_PASSWORD")
+var dbName = viper.GetString("DB_NAME")
+var sslMode = viper.GetString("SSL_MODE")
+var dbUser = viper.GetString("DB_USER")
+var dbPassword = viper.GetString("DB_PASSWORD")
 
 var dbInfo = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s", dbUser, dbPassword, dbName, sslMode)
 
