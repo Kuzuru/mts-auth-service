@@ -19,6 +19,11 @@ definitions:
       refreshToken:
         type: string
     type: object
+  handler.ValidateResponse:
+    properties:
+      login:
+        type: string
+    type: object
 host: localhost:3000
 info:
   contact:
@@ -30,6 +35,32 @@ info:
   title: Auth Service API
   version: "2.0"
 paths:
+  /auth/v1/i:
+    post:
+      description: This route validates tokens and returns user info
+      operationId: validate
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ValidateResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Validate
+      tags:
+      - Auth
   /auth/v1/login:
     post:
       consumes:
@@ -59,6 +90,28 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Login
+      tags:
+      - Auth
+  /auth/v1/logout:
+    post:
+      description: Logout from account
+      operationId: logout-account
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Logout
       tags:
       - Auth
 swagger: "2.0"

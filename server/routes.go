@@ -89,6 +89,15 @@ func Login(v1 fiber.Router) {
 	})
 }
 
+// TODO: We have to pass tokens through swagger somehow
+// @Summary Validate
+// @Tags Auth
+// @Description This route validates tokens and returns user info
+// @ID validate
+// @Produce json
+// @Success 200 {object} handler.ValidateResponse
+// @Failure 401,403,500 {object} handler.ErrorResponse
+// @Router /auth/v1/i [post]
 func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Post("/i", func(c *fiber.Ctx) error {
 		accessToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
@@ -221,7 +230,7 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 			c.Status(403)
 
 			return c.JSON(fiber.Map{
-				"error": "incorrect or no token",
+				"error": "Invalid token",
 			})
 		}
 
@@ -235,14 +244,21 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 
 		}*/
 
-		err = c.JSON(fiber.Map{
+		return c.JSON(fiber.Map{
 			"Login": (*accessTokenClaims)["login"],
 		})
-
-		return err
 	})
 }
 
+// TODO: Problem with tokens like in Validate route TODO
+// @Summary Logout
+// @Tags Auth
+// @Description Logout from account
+// @ID logout-account
+// @Produce json
+// @Success 200 {string} ok
+// @Failure 401,500 {object} handler.ErrorResponse
+// @Router /auth/v1/logout [post]
 func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Post("/logout", func(c *fiber.Ctx) error {
 		validationToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
