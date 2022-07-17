@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"regexp"
 
 	"github.com/rs/zerolog/log"
@@ -18,8 +17,7 @@ import (
 //
 // AddUser should only be used within initial configuration. It is not supposed to provide full registration process.
 func AddUser(user internal.User) error {
-	fmt.Println(dbInfo)
-	db, err := sql.Open("postgres", dbInfo)
+	db, err := sql.Open("postgres", internal.DbInfo)
 	if err != nil {
 		return err
 	}
@@ -66,7 +64,7 @@ func AddUser(user internal.User) error {
 // It then uses bcrypt.CompareHashAndPassword() to compare password hashes.
 // If user with such login isn't found or hashes do not match, BadCredentialsError is returned. Otherwise, nil is returned.
 func GetUser(user internal.User) error {
-	db, err := sql.Open("postgres", dbInfo)
+	db, err := sql.Open("postgres", internal.DbInfo)
 	if err != nil {
 		return err
 	}

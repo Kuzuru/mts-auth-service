@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/spf13/viper"
+	"fmt"
 	"os"
 	"runtime"
 	"syscall"
@@ -12,8 +12,10 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 
 	"gitlab.com/g6834/team32/auth-service/config"
+	"gitlab.com/g6834/team32/auth-service/internal"
 	"gitlab.com/g6834/team32/auth-service/internal/runners"
 	"gitlab.com/g6834/team32/auth-service/server"
 )
@@ -44,6 +46,15 @@ func main() {
 	var sentryDsn = viper.GetString("SENTRY_DSN")
 	var mode = viper.GetString("MODE")
 	var httpPort = viper.GetString("HTTP")
+	internal.DbName = viper.GetString("db.name")
+	internal.SslMode = viper.GetString("db.sslMode")
+	internal.DbHost = viper.GetString("db.host")
+	internal.DbPort = viper.GetString("db.port")
+	internal.DbUser = viper.GetString("db.postgres_user")
+	internal.DbPassword = viper.GetString("db.postgres_password")
+
+	internal.DbInfo = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		internal.DbHost, internal.DbPort, internal.DbUser, internal.DbPassword, internal.DbName, internal.SslMode)
 
 	// Set app mode
 	switch mode {
