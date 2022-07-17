@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2/middleware/pprof"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/gofiber/fiber/v2/middleware/pprof"
+	"github.com/gofiber/swagger"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
@@ -31,7 +34,7 @@ func ParseToken(tokenString string) (*jwt.MapClaims, error) {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return []byte(os.Getenv("SECRET")), nil
+			return []byte(viper.GetString("SECRET")), nil
 		},
 	)
 
@@ -64,7 +67,7 @@ func TokenEncode(claims *jwt.MapClaims, expiryAfter int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Our signed JWT token string
-	signedToken, err := token.SignedString([]byte(os.Getenv("SECRET")))
+	signedToken, err := token.SignedString([]byte(viper.GetString("SECRET")))
 	if err != nil {
 		return "", errors.New("error creating a token")
 	}
@@ -86,8 +89,7 @@ func Run(port string) {
 	cwt, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(cwt, "localhost:4000",
-		grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.DialContext(cwt, "localhost:4000", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		sentry.CaptureException(err)
 		log.Fatal().Stack().Err(err)
@@ -103,7 +105,7 @@ func Run(port string) {
 	JWTService := validation.NewJWTValidationServiceClient(conn)
 
 	if !fiber.IsChild() {
-		log.Info().Msgf("Running server on %s:%s\n", os.Getenv("HOST"), os.Getenv("HTTP"))
+		log.Info().Msgf("Running server on %s:%s\n", viper.GetString("HOST"), viper.GetString("HTTP"))
 	}
 
 	// Declaring app router
@@ -117,6 +119,7 @@ func Run(port string) {
 		recover.New(),
 		logger.New(),
 		pprof.New(),
+		cors.New(),
 	)
 
 	// /profiler
@@ -136,6 +139,9 @@ func Run(port string) {
 		c.Set("Version", "v1")
 		return c.Next()
 	})
+
+	// Registering Swagger API
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// Registering endpoints
 	RegisterHTTPEndpoints(v1, JWTService)
