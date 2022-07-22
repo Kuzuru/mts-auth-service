@@ -26,7 +26,7 @@ import (
 // @contact.url https://discordapp.com/users/258533190652657684
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-// @host localhost:3000
+// @host localhost:8626
 // @BasePath /
 func main() {
 	// Set logger output stream and time format
@@ -58,7 +58,7 @@ func main() {
 
 	// Set app mode
 	switch mode {
-	case "prod":
+	case "release":
 		zerolog.SetGlobalLevel(zerolog.FatalLevel)
 
 		// If debug mode is off then shutdown os.Stdout (yet we probably shouldn't do this)

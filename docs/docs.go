@@ -24,7 +24,7 @@ const docTemplate = `{
     "basePath": "{{.BasePath}}",
     "paths": {
         "/auth/v1/i": {
-            "post": {
+            "get": {
                 "description": "Get login",
                 "produces": [
                     "application/json"
@@ -41,8 +41,8 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }

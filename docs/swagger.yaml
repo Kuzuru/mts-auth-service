@@ -24,7 +24,7 @@ definitions:
       login:
         type: string
     type: object
-host: localhost:3000
+host: localhost:8626
 info:
   contact:
     name: API Support (Discord)
@@ -36,7 +36,7 @@ info:
   version: "2.0"
 paths:
   /auth/v1/i:
-    post:
+    get:
       description: Get login
       operationId: info
       produces:
@@ -46,8 +46,8 @@ paths:
           description: OK
           schema:
             type: string
-        "401":
-          description: Unauthorized
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":

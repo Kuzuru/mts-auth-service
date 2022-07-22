@@ -1,19 +1,18 @@
 package server
 
-// TODO: Needs more refactoring. I have only extracted POST routes to a new file.
-
 import (
 	"context"
 	"encoding/base64"
+	"strconv"
+	"strings"
+
 	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
-	_ "gitlab.com/g6834/team32/auth-service/docs"
-	"strconv"
-	"strings"
 
+	_ "gitlab.com/g6834/team32/auth-service/docs"
 	"gitlab.com/g6834/team32/auth-service/internal"
 	"gitlab.com/g6834/team32/auth-service/internal/db"
 	validation "gitlab.com/g6834/team32/auth-service/pkg/JWTValidationService"
@@ -97,7 +96,6 @@ func Login(v1 fiber.Router) {
 	})
 }
 
-// TODO: We have to pass tokens through swagger somehow
 // @Summary Validate
 // @Tags Auth
 // @Description This route validates tokens and returns user info
@@ -201,7 +199,6 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 	})
 }
 
-// TODO: Problem with tokens like in Validate route TODO
 // @Summary Logout
 // @Tags Auth
 // @Description Logout from account
@@ -245,8 +242,8 @@ func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 // @ID info
 // @Produce json
 // @Success 200 {string} ok
-// @Failure 401,500 {object} handler.ErrorResponse
-// @Router /auth/v1/i [post]
+// @Failure 403,500 {object} handler.ErrorResponse
+// @Router /auth/v1/i [get]
 func Info(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Get("/i", func(c *fiber.Ctx) error {
 		validationToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
