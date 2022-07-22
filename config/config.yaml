@@ -1,6 +1,6 @@
 MODE: "debug"
 
-HTTP: "3000"
+HTTP: "8626"
 GRPC: "4000"
 METRICS: "9000"
 

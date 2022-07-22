@@ -25,30 +25,24 @@ const docTemplate = `{
     "paths": {
         "/auth/v1/i": {
             "post": {
-                "description": "This route validates tokens and returns user info",
+                "description": "Get login",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Validate",
-                "operationId": "validate",
+                "summary": "Info",
+                "operationId": "info",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ValidateResponse"
+                            "type": "string"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -141,6 +135,45 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/auth/v1/validate": {
+            "post": {
+                "description": "This route validates tokens and returns user info",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Validate",
+                "operationId": "validate",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ValidateResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -188,7 +221,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "2.0",
-	Host:             "localhost:3000",
+	Host:             "localhost:8626",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Auth Service API",

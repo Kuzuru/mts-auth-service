@@ -4,20 +4,18 @@ package server
 
 import (
 	"context"
-	"errors"
-	"github.com/spf13/viper"
-	"strconv"
-
+	"encoding/base64"
 	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
-
+	"github.com/spf13/viper"
 	_ "gitlab.com/g6834/team32/auth-service/docs"
+	"strconv"
+	"strings"
 
 	"gitlab.com/g6834/team32/auth-service/internal"
 	"gitlab.com/g6834/team32/auth-service/internal/db"
-	"gitlab.com/g6834/team32/auth-service/internal/handlers"
 	validation "gitlab.com/g6834/team32/auth-service/pkg/JWTValidationService"
 )
 
@@ -35,10 +33,20 @@ func Login(v1 fiber.Router) {
 	v1.Post("/login", func(c *fiber.Ctx) error {
 		var user internal.User
 
-		if err := c.BodyParser(&user); err != nil {
-			return c.Status(500).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+		header := c.GetReqHeaders()
+		auth := header["Authorization"]
+		if auth == "" {
+			if err := c.BodyParser(&user); err != nil {
+				return c.Status(400).JSON(fiber.Map{
+					"error": err.Error(),
+				})
+			}
+		} else {
+			authStr := strings.Split(auth, " ")
+			decoded, _ := base64.StdEncoding.DecodeString(authStr[1])
+			userCreds := strings.Split(string(decoded), ":")
+			user.Login = userCreds[0]
+			user.Password = userCreds[1]
 		}
 
 		// Searching for user in DB
@@ -50,8 +58,8 @@ func Login(v1 fiber.Router) {
 		}
 
 		// Getting access and refresh tokens expires time
-		accessTokenTTL, _ := strconv.ParseInt(viper.GetString("ACCESS_TTL"), 10, 64)
-		refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("REFRESH_TTL"), 10, 64)
+		accessTokenTTL, _ := strconv.ParseInt(viper.GetString("token.accessToken.ttl"), 10, 64)
+		refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("token.refreshToken.ttl"), 10, 64)
 
 		accessTokenString, err := CreateToken(&jwt.MapClaims{
 			"login": user.Login,
@@ -63,7 +71,7 @@ func Login(v1 fiber.Router) {
 		}
 
 		refreshTokenString, err := CreateToken(&jwt.MapClaims{
-			"id": user.ID,
+			"login": user.Login,
 		}, refreshTokenTTL)
 
 		if err != nil {
@@ -97,65 +105,42 @@ func Login(v1 fiber.Router) {
 // @Produce json
 // @Success 200 {object} handler.ValidateResponse
 // @Failure 401,403,500 {object} handler.ErrorResponse
-// @Router /auth/v1/i [post]
+// @Router /auth/v1/validate [post]
 func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
-	v1.Post("/i", func(c *fiber.Ctx) error {
+	v1.Post("/validate", func(c *fiber.Ctx) error {
 		accessToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
 		refreshToken := &validation.IsTokenValidRequest{Token: c.Cookies("refreshToken")}
 
 		// To make it global outside err nil check
 		var accessTokenString string
 
-		// TODO: refactor this part of code. Probably use err.(type) assertion instead of many errors.Is
 		_, err := JWTService.IsTokenValid(context.Background(), accessToken)
-		if errors.Is(err, handlers.ErrParseToken) {
-			log.Error().Stack().Msg(err.Error())
-
-			return c.SendStatus(500)
-
-		} else if errors.Is(err, handlers.ErrInvalidToken) || errors.Is(err, handlers.ErrExpiredToken) {
-			// If access token is not valid then we check
-			// for refreshToken validity. If refresh token
-			// is valid then we're creating new access token
+		if err != nil {
 			_, err = JWTService.IsTokenValid(context.Background(), refreshToken)
-			if errors.Is(err, handlers.ErrParseToken) {
-				log.Error().Stack().Msg(err.Error())
+			if err != nil {
+				log.Error().Msg(err.Error())
+				c.Status(403)
 
-				return c.SendStatus(500)
-			} else if errors.Is(err, handlers.ErrInvalidToken) || errors.Is(err, handlers.ErrExpiredToken) {
-				log.Error().Stack().Msg(err.Error())
-
-				return c.SendStatus(403)
+				return c.JSON(fiber.Map{
+					"error": err.Error(),
+				})
 			}
 
 			// Parsing refresh token to get user id
-			refreshTokenClaims, err := ParseToken(c.Cookies("refreshToken"))
-			if errors.Is(err, handlers.ErrParseToken) {
-				log.Error().Stack().Msg(err.Error())
+			refreshTokenClaims, err := ParseToken(refreshToken.GetToken())
+			if err != nil {
+				log.Error().Msg(err.Error())
+				c.Status(403)
 
-				return c.SendStatus(500)
-			} else if errors.Is(err, handlers.ErrExpiredToken) {
-				log.Error().Stack().Msg(err.Error())
-
-				return c.SendStatus(403)
-			} else if errors.Is(err, handlers.ErrInvalidToken) {
-				log.Error().Stack().Msg(err.Error())
-
-				return c.SendStatus(401)
+				return c.JSON(fiber.Map{
+					"error": err.Error(),
+				})
 			}
-			userID := (*refreshTokenClaims)["id"]
 
-			// Searching for user in "DB"
 			var user internal.User
-			err = db.GetUser(user)
-			if err != nil || user.ID != userID.(int) {
-				log.Error().Stack().Msg(err.Error())
 
-				return c.SendStatus(403)
-			}
-
-			accessTokenTTL, _ := strconv.ParseInt(viper.GetString("ACCESS_TTL"), 10, 64)
-			refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("REFRESH_TTL"), 10, 64)
+			accessTokenTTL, _ := strconv.ParseInt(viper.GetString("token.accessToken.ttl"), 10, 64)
+			refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("token.refreshToken.ttl"), 10, 64)
 
 			accessTokenString, err = CreateToken(&jwt.MapClaims{
 				"Login": user.Login,
@@ -163,16 +148,24 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 
 			if err != nil {
 				log.Error().Err(err)
-				return c.SendStatus(500)
+				c.Status(500)
+
+				return c.JSON(fiber.Map{
+					"error": err.Error(),
+				})
 			}
 
 			refreshTokenString, err := CreateToken(&jwt.MapClaims{
-				"id": user.ID,
+				"Login": user.Login,
 			}, refreshTokenTTL)
 
 			if err != nil {
 				log.Error().Err(err)
-				return c.SendStatus(500)
+				c.Status(500)
+
+				return c.JSON(fiber.Map{
+					"error": err.Error(),
+				})
 			}
 
 			// Access token cookie
@@ -181,41 +174,9 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 			// Refresh token cookie
 			SetCookie(c, "refreshToken", refreshTokenString, refreshTokenTTL)
 
-			/*usersList := viper.GetStringMap("users")
-			for k := range usersList {
-				user := viper.GetStringMapString("users." + k)
-
-				if user["id"] == fmt.Sprint(userID) {
-					// Generating a new pair of tokens
-					accessTokenTTL, _ := strconv.ParseInt(os.Getenv("ACCESS_TTL"), 10, 64)
-					refreshTokenTTL, _ := strconv.ParseInt(os.Getenv("REFRESH_TTL"), 10, 64)
-					//accessTokenTTL, refreshTokenTTL := viper.GetInt64("token.accessToken.ttl"), viper.GetInt64("token.refreshToken.ttl")
-
-					accessTokenString, err = CreateToken(&jwt.MapClaims{
-						"Login": user["login"],
-					}, accessTokenTTL)
-
-					if err != nil {
-						log.Error().Err(err)
-						return c.SendStatus(500)
-					}
-
-					refreshTokenString, err := CreateToken(&jwt.MapClaims{
-						"id": user["id"],
-					}, refreshTokenTTL)
-
-					if err != nil {
-						log.Error().Err(err)
-						return c.SendStatus(500)
-					}
-
-					// Access token cookie
-					SetCookie(c, "accessToken", accessTokenString, accessTokenTTL)
-
-					// Refresh token cookie
-					SetCookie(c, "refreshToken", refreshTokenString, refreshTokenTTL)
-				}
-			}*/
+			return c.JSON(fiber.Map{
+				"Login": (*refreshTokenClaims)["login"],
+			})
 		}
 
 		// If error was not nil, then we created a new
@@ -230,19 +191,9 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 			c.Status(403)
 
 			return c.JSON(fiber.Map{
-				"error": "Invalid token",
+				"error": err.Error(),
 			})
 		}
-
-		/*if err != nil {
-			accessTokenClaims, err = ParseToken(accessTokenString)
-			if err != nil {
-				sentry.CaptureException(err)
-				return c.SendStatus(500)
-			}
-		} else {
-
-		}*/
 
 		return c.JSON(fiber.Map{
 			"Login": (*accessTokenClaims)["login"],
@@ -265,7 +216,7 @@ func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 
 		_, err := JWTService.IsTokenValid(context.Background(), validationToken)
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Msg(err.Error())
 			c.Status(401)
 
 			return c.JSON(fiber.Map{
@@ -285,5 +236,45 @@ func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 		}
 
 		return c.SendStatus(200)
+	})
+}
+
+// @Summary Info
+// @Tags Auth
+// @Description Get login
+// @ID info
+// @Produce json
+// @Success 200 {string} ok
+// @Failure 401,500 {object} handler.ErrorResponse
+// @Router /auth/v1/i [post]
+func Info(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
+	v1.Get("/i", func(c *fiber.Ctx) error {
+		validationToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
+
+		_, err := JWTService.IsTokenValid(context.Background(), validationToken)
+		if err != nil {
+			log.Error().Err(err)
+			c.Status(403)
+
+			return c.JSON(fiber.Map{
+				"error": "You're not authorized",
+			})
+		}
+
+		var accessTokenClaims *jwt.MapClaims
+
+		accessTokenClaims, err = ParseToken(c.Cookies("accessToken"))
+		if err != nil {
+			sentry.CaptureException(err)
+			c.Status(403)
+
+			return c.JSON(fiber.Map{
+				"error": "Invalid token",
+			})
+		}
+
+		return c.JSON(fiber.Map{
+			"Login": (*accessTokenClaims)["login"],
+		})
 	})
 }

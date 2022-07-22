@@ -4,19 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/gofiber/fiber/v2/middleware/pprof"
-	"github.com/gofiber/swagger"
-
 	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -34,7 +33,7 @@ func ParseToken(tokenString string) (*jwt.MapClaims, error) {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return []byte(viper.GetString("SECRET")), nil
+			return []byte(viper.GetString("token.secret")), nil
 		},
 	)
 
@@ -67,7 +66,7 @@ func TokenEncode(claims *jwt.MapClaims, expiryAfter int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Our signed JWT token string
-	signedToken, err := token.SignedString([]byte(viper.GetString("SECRET")))
+	signedToken, err := token.SignedString([]byte(viper.GetString("token.secret")))
 	if err != nil {
 		return "", errors.New("error creating a token")
 	}
@@ -81,6 +80,8 @@ func RegisterHTTPEndpoints(v1 fiber.Router, JWTService validation.JWTValidationS
 	Logout(v1, JWTService)
 
 	Validate(v1, JWTService)
+
+	Info(v1, JWTService)
 }
 
 func Run(port string) {
@@ -96,7 +97,7 @@ func Run(port string) {
 	}
 
 	defer func(conn *grpc.ClientConn) {
-		err := conn.Close()
+		err = conn.Close()
 		if err != nil {
 			log.Fatal().Stack().Err(err)
 		}
@@ -136,15 +137,15 @@ func Run(port string) {
 
 	// Middleware for /auth/v1
 	v1 := auth.Group("/v1", func(c *fiber.Ctx) error {
-		c.Set("Version", "v1")
+		c.Set("Version", "v1.0")
 		return c.Next()
 	})
 
-	// Registering Swagger API
-	app.Get("/swagger/*", swagger.HandlerDefault)
-
 	// Registering endpoints
 	RegisterHTTPEndpoints(v1, JWTService)
+
+	// Registering Swagger API
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// Running server in background
 	go func() {

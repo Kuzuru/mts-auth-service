@@ -40,7 +40,7 @@ func AddUser(user internal.User) error {
 	if errors.Is(err, sql.ErrNoRows) {
 
 		// If login is available, compute hashed password
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 12)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
 		if err != nil {
 			return err
 		}

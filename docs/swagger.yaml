@@ -37,28 +37,24 @@ info:
 paths:
   /auth/v1/i:
     post:
-      description: This route validates tokens and returns user info
-      operationId: validate
+      description: Get login
+      operationId: info
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ValidateResponse'
+            type: string
         "401":
           description: Unauthorized
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "403":
-          description: Forbidden
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-      summary: Validate
+      summary: Info
       tags:
       - Auth
   /auth/v1/login:
@@ -112,6 +108,32 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Logout
+      tags:
+      - Auth
+  /auth/v1/validate:
+    post:
+      description: This route validates tokens and returns user info
+      operationId: validate
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ValidateResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Validate
       tags:
       - Auth
 swagger: "2.0"
