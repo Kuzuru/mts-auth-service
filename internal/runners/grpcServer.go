@@ -34,7 +34,7 @@ func StartGRPC() {
 		log.Fatal().Stack().Err(err)
 	}
 
-	// Creating new gRPC server handler
+	// Creating new gRPC server handlers
 	s := grpc.NewServer()
 	gRPCServer := &handlers.GRPCServer{}
 

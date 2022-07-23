@@ -24,9 +24,9 @@ import (
 // @ID login-account
 // @Accept json
 // @Produce json
-// @Param input body handler.LoginRequest true "Account info"
-// @Success 200 {object} handler.LoginResponse
-// @Failure 403,500 {object} handler.ErrorResponse
+// @Param input body handlers.LoginRequest true "Account info"
+// @Success 200 {object} handlers.LoginResponse
+// @Failure 403,500 {object} handlers.ErrorResponse
 // @Router /auth/v1/login [post]
 func Login(v1 fiber.Router) {
 	v1.Post("/login", func(c *fiber.Ctx) error {
@@ -154,8 +154,8 @@ func Login(v1 fiber.Router) {
 // @Description This route validates tokens and returns user info
 // @ID validate
 // @Produce json
-// @Success 200 {object} handler.ValidateResponse
-// @Failure 401,403,500 {object} handler.ErrorResponse
+// @Success 200 {object} handlers.ValidateResponse
+// @Failure 401,403,500 {object} handlers.ErrorResponse
 // @Router /auth/v1/validate [post]
 func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Post("/validate", func(c *fiber.Ctx) error {
@@ -207,7 +207,7 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 			}
 
 			accessTokenString, err := CreateToken(&jwt.MapClaims{
-				"Login": user.Login,
+				"login": user.Login,
 			}, accessTokenTTL)
 
 			if err != nil {
@@ -219,7 +219,7 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 			}
 
 			refreshTokenString, err := CreateToken(&jwt.MapClaims{
-				"Login": user.Login,
+				"login": user.Login,
 			}, refreshTokenTTL)
 
 			if err != nil {
@@ -237,7 +237,7 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 			SetCookie(c, "refreshToken", refreshTokenString, refreshTokenTTL)
 
 			return c.JSON(fiber.Map{
-				"Login": (*refreshTokenClaims)["login"],
+				"login": (*refreshTokenClaims)["login"],
 			})
 		}
 
@@ -256,7 +256,7 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 		}
 
 		return c.JSON(fiber.Map{
-			"Login": (*accessTokenClaims)["login"],
+			"login": (*accessTokenClaims)["login"],
 		})
 	})
 }
@@ -267,7 +267,7 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 // @ID logout-account
 // @Produce json
 // @Success 200 {string} ok
-// @Failure 401,500 {object} handler.ErrorResponse
+// @Failure 401,500 {object} handlers.ErrorResponse
 // @Router /auth/v1/logout [post]
 func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Post("/logout", func(c *fiber.Ctx) error {
@@ -311,7 +311,7 @@ func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 // @ID info
 // @Produce json
 // @Success 200 {string} ok
-// @Failure 403,500 {object} handler.ErrorResponse
+// @Failure 403,500 {object} handlers.ErrorResponse
 // @Router /auth/v1/i [get]
 func Info(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Get("/i", func(c *fiber.Ctx) error {
@@ -343,7 +343,7 @@ func Info(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 			}
 
 			return c.JSON(fiber.Map{
-				"Login": (*refreshTokenClaims)["login"],
+				"login": (*refreshTokenClaims)["login"],
 			})
 		}
 
@@ -356,7 +356,7 @@ func Info(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 		}
 
 		return c.JSON(fiber.Map{
-			"Login": (*accessTokenClaims)["login"],
+			"login": (*accessTokenClaims)["login"],
 		})
 	})
 }

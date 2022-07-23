@@ -44,13 +44,13 @@ const docTemplate = `{
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -77,7 +77,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.LoginRequest"
+                            "$ref": "#/definitions/handlers.LoginRequest"
                         }
                     }
                 ],
@@ -85,19 +85,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.LoginResponse"
+                            "$ref": "#/definitions/handlers.LoginResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -124,13 +124,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -151,25 +151,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.ValidateResponse"
+                            "$ref": "#/definitions/handlers.ValidateResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     }
                 }
@@ -177,7 +177,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handler.ErrorResponse": {
+        "handlers.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -185,7 +185,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.LoginRequest": {
+        "handlers.LoginRequest": {
             "type": "object",
             "properties": {
                 "login": {
@@ -196,7 +196,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.LoginResponse": {
+        "handlers.LoginResponse": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -207,7 +207,7 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ValidateResponse": {
+        "handlers.ValidateResponse": {
             "type": "object",
             "properties": {
                 "login": {

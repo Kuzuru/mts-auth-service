@@ -1,4 +1,4 @@
-package handler
+package handlers
 
 type LoginRequest struct {
 	Login    string `json:"login"`
