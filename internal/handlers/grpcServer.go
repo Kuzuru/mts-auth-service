@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"context"
-	"github.com/rs/zerolog/log"
 	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
 	validation "gitlab.com/g6834/team32/auth-service/pkg/JWTValidationService"

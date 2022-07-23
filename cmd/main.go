@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"syscall"
@@ -11,12 +12,22 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 
 	"gitlab.com/g6834/team32/auth-service/config"
+	"gitlab.com/g6834/team32/auth-service/internal"
 	"gitlab.com/g6834/team32/auth-service/internal/runners"
 	"gitlab.com/g6834/team32/auth-service/server"
 )
 
+// @title Auth Service API
+// @version 2.0
+// @contact.name API Support (Discord)
+// @contact.url https://discordapp.com/users/258533190652657684
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @host localhost:8626
+// @BasePath /
 func main() {
 	// Set logger output stream and time format
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC1123})
@@ -26,13 +37,28 @@ func main() {
 	if err != nil {
 		log.Fatal().AnErr("Error loading .env file: %w", err)
 	}
-	var sentryDsn = os.Getenv("SENTRY_DSN")
-	var mode = os.Getenv("MODE")
-	var httpPort = os.Getenv("HTTP")
+
+	err = config.Init()
+	if err != nil {
+		log.Fatal().AnErr("Error loading config file: %w", err)
+	}
+
+	var sentryDsn = viper.GetString("SENTRY_DSN")
+	var mode = viper.GetString("MODE")
+	var httpPort = viper.GetString("HTTP")
+	internal.DbName = viper.GetString("db.name")
+	internal.SslMode = viper.GetString("db.sslMode")
+	internal.DbHost = viper.GetString("db.host")
+	internal.DbPort = viper.GetString("db.port")
+	internal.DbUser = viper.GetString("db.postgres_user")
+	internal.DbPassword = viper.GetString("db.postgres_password")
+
+	internal.DbInfo = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		internal.DbHost, internal.DbPort, internal.DbUser, internal.DbPassword, internal.DbName, internal.SslMode)
 
 	// Set app mode
 	switch mode {
-	case "prod":
+	case "release":
 		zerolog.SetGlobalLevel(zerolog.FatalLevel)
 
 		// If debug mode is off then shutdown os.Stdout (yet we probably shouldn't do this)
@@ -86,6 +112,7 @@ func main() {
 	if err != nil {
 		log.Fatal().Stack().Msgf("sentry.Init: %s", err)
 	}
+
 	defer sentry.Flush(2 * time.Second)
 
 	// Starting gRPC server only once

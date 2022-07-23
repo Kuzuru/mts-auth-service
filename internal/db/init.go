@@ -2,28 +2,21 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"io/ioutil"
-	"os"
 
 	_ "github.com/lib/pq"
+
+	"gitlab.com/g6834/team32/auth-service/internal"
 )
 
-var dbName = os.Getenv("DB_NAME")
-var sslMode = os.Getenv("SSL_MODE")
-var dbUser = os.Getenv("DB_USER")
-var dbPassword = os.Getenv("DB_PASSWORD")
-
-var dbInfo = fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s", dbUser, dbPassword, dbName, sslMode)
-
 func InitDb() error {
-	db, err := sql.Open("postgres", dbInfo)
+	db, err := sql.Open("postgres", internal.DbInfo)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	_, err = db.Exec(`CREATE DATABASE ` + dbName)
+	_, err = db.Exec(`CREATE DATABASE ` + internal.DbName)
 	if err != nil {
 		return err
 	}
@@ -32,7 +25,7 @@ func InitDb() error {
 }
 
 func CreateTables() error {
-	db, err := sql.Open("postgres", dbInfo)
+	db, err := sql.Open("postgres", internal.DbInfo)
 	if err != nil {
 		return err
 	}

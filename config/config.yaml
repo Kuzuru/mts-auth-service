@@ -1,28 +1,18 @@
-debug: true
+MODE: "debug"
 
-ports:
-  http: 3000
-  grpc: 4000
-  metrics: 9000
+HTTP: "8626"
+GRPC: "4000"
+METRICS: "9000"
 
-sentry:
-  dsn: "https://ec575dab711043f9aac76447e1947827@sentry.k8s.golang-mts-teta.ru/18"
+SENTRY_DSN: "https://ec575dab711043f9aac76447e1947827@sentry.k8s.golang-mts-teta.ru/18"
 
-users:
-  first_user:
-    id: 1
-    login: "John Doe"
-    password: "$2a$04$MSHk3Xd/ZOFzdiBySEGLE.LTYpUzc9By55qhfmoBYaG4LdOZg6W2i" # Passwd: !@#QWE123qwe
-
-  second_user:
-    id: 2
-    login: "Michael Jackson"
-    password: "$2a$04$MSHk3Xd/ZOFzdiBySEGLE.LTYpUzc9By55qhfmoBYaG4LdOZg6W2i" # Passwd: !@#QWE123qwe
-
-  third_user:
-    id: 3
-    login: "test123"
-    password: "$2a$12$6kx0HmPA.O66v9cCNpr/f.RH.o3aWskap4wCN1q5fX.rx8cw9jjEW" # Passwd: qwerty
+db:
+  name: "postgres"
+  sslMode: "disable"
+  host: "91.185.93.23"
+  port: "5432"
+  postgres_user: "team32"
+  postgres_password: "mNgdyMTbhVGd"
 
 token:
   secret: "AFoY0waWhv2AYynuVRBTC0b0msyQv2ESfFLdAzRBGAh1izFTZ3Zerthz07FH2W0m"

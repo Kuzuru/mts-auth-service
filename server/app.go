@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,8 +11,11 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/swagger"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -31,7 +33,7 @@ func ParseToken(tokenString string) (*jwt.MapClaims, error) {
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 
-			return []byte(os.Getenv("SECRET")), nil
+			return []byte(viper.GetString("token.secret")), nil
 		},
 	)
 
@@ -64,7 +66,7 @@ func TokenEncode(claims *jwt.MapClaims, expiryAfter int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Our signed JWT token string
-	signedToken, err := token.SignedString([]byte(os.Getenv("SECRET")))
+	signedToken, err := token.SignedString([]byte(viper.GetString("token.secret")))
 	if err != nil {
 		return "", errors.New("error creating a token")
 	}
@@ -78,6 +80,8 @@ func RegisterHTTPEndpoints(v1 fiber.Router, JWTService validation.JWTValidationS
 	Logout(v1, JWTService)
 
 	Validate(v1, JWTService)
+
+	Info(v1, JWTService)
 }
 
 func Run(port string) {
@@ -86,15 +90,14 @@ func Run(port string) {
 	cwt, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, err := grpc.DialContext(cwt, "localhost:4000",
-		grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	conn, err := grpc.DialContext(cwt, "localhost:4000", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		sentry.CaptureException(err)
 		log.Fatal().Stack().Err(err)
 	}
 
 	defer func(conn *grpc.ClientConn) {
-		err := conn.Close()
+		err = conn.Close()
 		if err != nil {
 			log.Fatal().Stack().Err(err)
 		}
@@ -103,7 +106,7 @@ func Run(port string) {
 	JWTService := validation.NewJWTValidationServiceClient(conn)
 
 	if !fiber.IsChild() {
-		log.Info().Msgf("Running server on %s:%s\n", os.Getenv("HOST"), os.Getenv("HTTP"))
+		log.Info().Msgf("Running server on %s:%s\n", viper.GetString("HOST"), viper.GetString("HTTP"))
 	}
 
 	// Declaring app router
@@ -117,6 +120,7 @@ func Run(port string) {
 		recover.New(),
 		logger.New(),
 		pprof.New(),
+		cors.New(),
 	)
 
 	// /profiler
@@ -133,12 +137,15 @@ func Run(port string) {
 
 	// Middleware for /auth/v1
 	v1 := auth.Group("/v1", func(c *fiber.Ctx) error {
-		c.Set("Version", "v1")
+		c.Set("Version", "v1.0")
 		return c.Next()
 	})
 
 	// Registering endpoints
 	RegisterHTTPEndpoints(v1, JWTService)
+
+	// Registering Swagger API
+	app.Get("/swagger/*", swagger.HandlerDefault)
 
 	// Running server in background
 	go func() {
