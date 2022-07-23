@@ -32,41 +32,91 @@ func Login(v1 fiber.Router) {
 	v1.Post("/login", func(c *fiber.Ctx) error {
 		var user internal.User
 
-		header := c.GetReqHeaders()
-		auth := header["Authorization"]
-		if auth == "" {
+		// Check if request header contains Authorization field
+		authHeader := c.GetReqHeaders()["Authorization"]
+		if authHeader == "" {
+			// If no Authorization info was found in header, expect login info in request body as required by v1.0
 			if err := c.BodyParser(&user); err != nil {
-				return c.Status(400).JSON(fiber.Map{
+				log.Debug().Stack().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"error": err.Error(),
 				})
 			}
+
 		} else {
-			authStr := strings.Split(auth, " ")
-			decoded, _ := base64.StdEncoding.DecodeString(authStr[1])
-			userCreds := strings.Split(string(decoded), ":")
-			user.Login = userCreds[0]
-			user.Password = userCreds[1]
+			// If Authorization info was found in header, assume it is v1.1
+			authStr := strings.Split(authHeader, " ")
+
+			// Only support Basic authentication
+			if authStr[0] != "Basic" {
+				log.Debug().Err(ErrUnsupportedAuthMethod).Msg(ErrUnsupportedAuthMethod.Error())
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": ErrUnsupportedAuthMethod.Error(),
+				})
+			}
+
+			// Decode base64 auth info
+			decoded, err := base64.StdEncoding.DecodeString(authStr[1])
+			if err != nil {
+				sentry.CaptureException(err)
+				log.Error().Stack().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": err.Error(),
+				})
+			}
+
+			// Split user credentials
+			userCredentials := strings.Split(string(decoded), ":")
+
+			// Check that userCredentials contains only 2 elements (login and password)
+			if len(userCredentials) != 2 {
+				log.Debug().Err(ErrIncorrectCredentialsFormat).Msg(ErrIncorrectCredentialsFormat.Error())
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": ErrIncorrectCredentialsFormat.Error(),
+				})
+			}
+
+			user.Login = userCredentials[0]
+			user.Password = userCredentials[1]
 		}
 
 		// Searching for user in DB
 		err := db.GetUser(user)
 		if err != nil {
-			return c.Status(403).JSON(fiber.Map{
+			log.Debug().Err(err).Msg(err.Error())
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		}
 
-		// Getting access and refresh tokens expires time
-		accessTokenTTL, _ := strconv.ParseInt(viper.GetString("token.accessToken.ttl"), 10, 64)
-		refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("token.refreshToken.ttl"), 10, 64)
+		// Getting access and refresh tokens ttl
+		accessTokenTTL, err := strconv.ParseInt(viper.GetString("token.accessToken.ttl"), 10, 64)
+		if err != nil {
+			sentry.CaptureException(err)
+			log.Error().Stack().Err(err).Msg(err.Error())
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		refreshTokenTTL, err := strconv.ParseInt(viper.GetString("token.refreshToken.ttl"), 10, 64)
+		if err != nil {
+			sentry.CaptureException(err)
+			log.Error().Stack().Err(err).Msg(err.Error())
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
 
 		accessTokenString, err := CreateToken(&jwt.MapClaims{
 			"login": user.Login,
 		}, accessTokenTTL)
 
 		if err != nil {
-			log.Error().Err(err)
-			return c.SendStatus(500)
+			sentry.CaptureException(err)
+			log.Error().Stack().Err(err).Msg(err.Error())
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
 		}
 
 		refreshTokenString, err := CreateToken(&jwt.MapClaims{
@@ -74,8 +124,11 @@ func Login(v1 fiber.Router) {
 		}, refreshTokenTTL)
 
 		if err != nil {
-			log.Error().Err(err)
-			return c.SendStatus(500)
+			sentry.CaptureException(err)
+			log.Error().Stack().Err(err).Msg(err.Error())
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
 		}
 
 		// Access token cookie
@@ -109,46 +162,58 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 		accessToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
 		refreshToken := &validation.IsTokenValidRequest{Token: c.Cookies("refreshToken")}
 
-		// To make it global outside err nil check
-		var accessTokenString string
-
+		// Check access token validity
 		_, err := JWTService.IsTokenValid(context.Background(), accessToken)
 		if err != nil {
+			// if access token is invalid, check refresh token
+			log.Debug().Msg("access token is invalid")
 			_, err = JWTService.IsTokenValid(context.Background(), refreshToken)
-			if err != nil {
-				log.Error().Msg(err.Error())
-				c.Status(403)
 
-				return c.JSON(fiber.Map{
+			if err != nil {
+				// if refresh token is invalid, validation has failed
+				log.Debug().Msg("refresh token is invalid")
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error": err.Error(),
 				})
 			}
 
-			// Parsing refresh token to get user id
+			// If refresh token is valid, parse it to retrieve user login
 			refreshTokenClaims, err := ParseToken(refreshToken.GetToken())
 			if err != nil {
-				log.Error().Msg(err.Error())
-				c.Status(403)
-
-				return c.JSON(fiber.Map{
+				log.Error().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 					"error": err.Error(),
 				})
 			}
 
 			var user internal.User
 
-			accessTokenTTL, _ := strconv.ParseInt(viper.GetString("token.accessToken.ttl"), 10, 64)
-			refreshTokenTTL, _ := strconv.ParseInt(viper.GetString("token.refreshToken.ttl"), 10, 64)
+			// Getting access and refresh tokens ttl
+			accessTokenTTL, err := strconv.ParseInt(viper.GetString("token.accessToken.ttl"), 10, 64)
+			if err != nil {
+				sentry.CaptureException(err)
+				log.Error().Stack().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": err.Error(),
+				})
+			}
+			refreshTokenTTL, err := strconv.ParseInt(viper.GetString("token.refreshToken.ttl"), 10, 64)
+			if err != nil {
+				sentry.CaptureException(err)
+				log.Error().Stack().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error": err.Error(),
+				})
+			}
 
-			accessTokenString, err = CreateToken(&jwt.MapClaims{
+			accessTokenString, err := CreateToken(&jwt.MapClaims{
 				"Login": user.Login,
 			}, accessTokenTTL)
 
 			if err != nil {
-				log.Error().Err(err)
-				c.Status(500)
-
-				return c.JSON(fiber.Map{
+				sentry.CaptureException(err)
+				log.Error().Stack().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"error": err.Error(),
 				})
 			}
@@ -158,10 +223,9 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 			}, refreshTokenTTL)
 
 			if err != nil {
-				log.Error().Err(err)
-				c.Status(500)
-
-				return c.JSON(fiber.Map{
+				sentry.CaptureException(err)
+				log.Error().Stack().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 					"error": err.Error(),
 				})
 			}
@@ -185,10 +249,8 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 
 		accessTokenClaims, err = ParseToken(c.Cookies("accessToken"))
 		if err != nil {
-			sentry.CaptureException(err)
-			c.Status(403)
-
-			return c.JSON(fiber.Map{
+			log.Error().Err(err).Msg(err.Error())
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		}
@@ -209,16 +271,23 @@ func Validate(v1 fiber.Router, JWTService validation.JWTValidationServiceClient)
 // @Router /auth/v1/logout [post]
 func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Post("/logout", func(c *fiber.Ctx) error {
-		validationToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
+		accessToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
+		refreshToken := &validation.IsTokenValidRequest{Token: c.Cookies("refreshToken")}
 
-		_, err := JWTService.IsTokenValid(context.Background(), validationToken)
+		// Check access token validity
+		_, err := JWTService.IsTokenValid(context.Background(), accessToken)
 		if err != nil {
-			log.Error().Msg(err.Error())
-			c.Status(401)
+			// if access token is invalid, check refresh token
+			log.Debug().Msg("access token is invalid")
+			_, err = JWTService.IsTokenValid(context.Background(), refreshToken)
 
-			return c.JSON(fiber.Map{
-				"error": "You're not authorized",
-			})
+			if err != nil {
+				// if refresh token is invalid, validation has failed
+				log.Debug().Msg("refresh token is invalid")
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": err.Error(),
+				})
+			}
 		}
 
 		// Removing accessToken cookie
@@ -246,27 +315,43 @@ func Logout(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 // @Router /auth/v1/i [get]
 func Info(v1 fiber.Router, JWTService validation.JWTValidationServiceClient) {
 	v1.Get("/i", func(c *fiber.Ctx) error {
-		validationToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
+		accessToken := &validation.IsTokenValidRequest{Token: c.Cookies("accessToken")}
+		refreshToken := &validation.IsTokenValidRequest{Token: c.Cookies("refreshToken")}
 
-		_, err := JWTService.IsTokenValid(context.Background(), validationToken)
+		// Check access token validity
+		_, err := JWTService.IsTokenValid(context.Background(), accessToken)
 		if err != nil {
-			log.Error().Err(err)
-			c.Status(403)
+			// if access token is invalid, check refresh token
+			log.Debug().Msg("access token is invalid")
+			_, err = JWTService.IsTokenValid(context.Background(), refreshToken)
+
+			if err != nil {
+				// if refresh token is invalid, validation has failed
+				log.Debug().Msg("refresh token is invalid")
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": err.Error(),
+				})
+			}
+
+			// If refresh token is valid, parse it to retrieve user login
+			refreshTokenClaims, err := ParseToken(refreshToken.GetToken())
+			if err != nil {
+				log.Error().Err(err).Msg(err.Error())
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"error": err.Error(),
+				})
+			}
 
 			return c.JSON(fiber.Map{
-				"error": "You're not authorized",
+				"Login": (*refreshTokenClaims)["login"],
 			})
 		}
 
-		var accessTokenClaims *jwt.MapClaims
-
-		accessTokenClaims, err = ParseToken(c.Cookies("accessToken"))
+		accessTokenClaims, err := ParseToken(refreshToken.GetToken())
 		if err != nil {
-			sentry.CaptureException(err)
-			c.Status(403)
-
-			return c.JSON(fiber.Map{
-				"error": "Invalid token",
+			log.Error().Err(err).Msg(err.Error())
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": err.Error(),
 			})
 		}
 
